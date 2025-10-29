@@ -8,7 +8,7 @@ public class RealtimeOrders
 {
     [Key]
     [Column("index")]
-    public int Index { get; set; }
+    public long? Index { get; set; }
 
     [Column("order_id")]
     public string? OrderId { get; set; }
@@ -29,55 +29,55 @@ public class RealtimeOrders
     public DateTime? Expiry { get; set; }
 
     [Column("strike")]
-    public decimal? Strike { get; set; }
+    public double? Strike { get; set; }
 
     [Column("action")]
     public string? Action { get; set; }
 
     [Column("qty")]
-    public int? Qty { get; set; }
+    public long? Qty { get; set; }
 
     [Column("entry_price")]
-    public decimal? EntryPrice { get; set; }
+    public double? EntryPrice { get; set; }
 
     [Column("current_price")]
-    public decimal? CurrentPrice { get; set; }
+    public double? CurrentPrice { get; set; }
 
     [Column("equity_price_at_entry")]
-    public decimal? EquityPriceAtEntry { get; set; }
+    public double? EquityPriceAtEntry { get; set; }
 
     [Column("equity_price_current")]
-    public decimal? EquityPriceCurrent { get; set; }
+    public double? EquityPriceCurrent { get; set; }
 
     [Column("orats_iv")]
-    public decimal? OratsIv { get; set; }
+    public double? OratsIv { get; set; }
 
     [Column("calculated_iv")]
-    public decimal? CalculatedIv { get; set; }
+    public double? CalculatedIv { get; set; }
 
     [Column("delta")]
-    public decimal? Delta { get; set; }
+    public double? Delta { get; set; }
 
     [Column("gamma")]
-    public decimal? Gamma { get; set; }
+    public double? Gamma { get; set; }
 
     [Column("theta")]
-    public decimal? Theta { get; set; }
+    public double? Theta { get; set; }
 
     [Column("vega")]
-    public decimal? Vega { get; set; }
+    public double? Vega { get; set; }
 
     [Column("score")]
-    public decimal? Score { get; set; }
+    public double? Score { get; set; }
 
     [Column("state")]
     public string? State { get; set; }
 
     [Column("bars_held")]
-    public int? BarsHeld { get; set; }
+    public long? BarsHeld { get; set; }
 
     [Column("realized_profit")]
-    public decimal? RealizedProfit { get; set; }
+    public double? RealizedProfit { get; set; }
 
     [Column("timestamp")]
     public DateTime? Timestamp { get; set; }

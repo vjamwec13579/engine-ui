@@ -34,7 +34,7 @@ public class TradeStatisticsService : ITradeStatisticsService
         {
             var now = DateTime.UtcNow;
             var fiveMinutesAgo = now.AddMinutes(-5);
-            var yearStart = new DateTime(now.Year, 1, 1);
+            var yearStart = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
             // Engine Health
             var lastSignal = await _context.RealtimeSignalStore
@@ -154,7 +154,7 @@ public class TradeStatisticsService : ITradeStatisticsService
 
             var winningTrades = closedWithProfit.Count(o => o.RealizedProfit > 0);
             var winRate = closedWithProfit.Count > 0
-                ? (decimal)winningTrades / closedWithProfit.Count * 100
+                ? (double)winningTrades / closedWithProfit.Count * 100
                 : 0;
 
             var avgProfitPerTrade = completedOrders > 0

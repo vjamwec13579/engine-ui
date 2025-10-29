@@ -3,9 +3,9 @@ namespace TradingEngine.API.DTOs;
 public class DashboardMetrics
 {
     public EngineHealthStatus EngineHealth { get; set; } = new();
-    public decimal GrossPortfolio { get; set; }
-    public decimal YtdPnl { get; set; }
-    public decimal YtdReturnPercent { get; set; }
+    public double GrossPortfolio { get; set; }
+    public double YtdPnl { get; set; }
+    public double YtdReturnPercent { get; set; }
     public double TradesPerMinute { get; set; }
     public TimeSpan ClusterUptime { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
