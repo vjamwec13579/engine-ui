@@ -1,0 +1,53 @@
+.page-title {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: var(--light-blue);
+  text-align: center;
+}
+
+.health-status {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.health-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.health-details p {
+  margin: 5px 0;
+}
+
+.health-issues {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid var(--danger);
+  border-radius: 4px;
+}
+
+.health-issues ul {
+  margin-left: 20px;
+  margin-top: 5px;
+}
+
+.health-issues li {
+  color: var(--danger);
+}
+
+.last-updated {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 20px;
+}
+
+.error-message {
+  color: var(--danger);
+  text-align: center;
+  padding: 20px;
+}

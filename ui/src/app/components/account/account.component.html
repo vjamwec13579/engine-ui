@@ -1,0 +1,130 @@
+<div class="container">
+  <h1 class="page-title">Account Management</h1>
+
+  <div *ngIf="loading" class="spinner"></div>
+
+  <div *ngIf="error" class="card">
+    <p class="error-message">{{ error }}</p>
+  </div>
+
+  <div *ngIf="accountInfo && !loading">
+    <!-- Account Information -->
+    <div class="card">
+      <div class="card-header">
+        Alpaca Account Information
+        <button class="btn btn-secondary refresh-btn" (click)="refresh()">Refresh</button>
+      </div>
+
+      <div class="account-info-grid">
+        <div class="info-item">
+          <span class="info-label">Account ID:</span>
+          <span class="info-value">{{ accountInfo.accountId }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Status:</span>
+          <span class="badge" [ngClass]="getStatusClass(accountInfo.status)">
+            {{ accountInfo.status }}
+          </span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Currency:</span>
+          <span class="info-value">{{ accountInfo.currency }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Created At:</span>
+          <span class="info-value">{{ accountInfo.createdAt | date:'medium' }}</span>
+        </div>
+      </div>
+
+      <!-- Account Metrics -->
+      <div class="metrics-grid mt-20">
+        <div class="metric-card">
+          <div class="metric-label">Cash</div>
+          <div class="metric-value">{{ formatCurrency(accountInfo.cash) }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Portfolio Value</div>
+          <div class="metric-value">{{ formatCurrency(accountInfo.portfolioValue) }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Buying Power</div>
+          <div class="metric-value">{{ formatCurrency(accountInfo.buyingPower) }}</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Day Trades</div>
+          <div class="metric-value">{{ accountInfo.daytradeCount || 0 }}</div>
+        </div>
+      </div>
+
+      <!-- Account Flags -->
+      <div class="account-flags">
+        <div class="flag-item" [class.flag-warning]="accountInfo.patternDayTrader">
+          <strong>Pattern Day Trader:</strong> {{ accountInfo.patternDayTrader ? 'Yes' : 'No' }}
+        </div>
+        <div class="flag-item" [class.flag-danger]="accountInfo.tradingBlocked">
+          <strong>Trading Blocked:</strong> {{ accountInfo.tradingBlocked ? 'Yes' : 'No' }}
+        </div>
+        <div class="flag-item" [class.flag-danger]="accountInfo.transfersBlocked">
+          <strong>Transfers Blocked:</strong> {{ accountInfo.transfersBlocked ? 'Yes' : 'No' }}
+        </div>
+        <div class="flag-item" [class.flag-danger]="accountInfo.accountBlocked">
+          <strong>Account Blocked:</strong> {{ accountInfo.accountBlocked ? 'Yes' : 'No' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Positions -->
+    <div class="card">
+      <div class="card-header">Current Positions</div>
+
+      <div *ngIf="positions.length === 0" class="no-data">
+        No open positions
+      </div>
+
+      <div *ngIf="positions.length > 0" class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Side</th>
+              <th>Quantity</th>
+              <th>Avg Entry</th>
+              <th>Current Price</th>
+              <th>Market Value</th>
+              <th>Cost Basis</th>
+              <th>Unrealized P&L</th>
+              <th>Unrealized P&L %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let position of positions">
+              <td><strong>{{ position.symbol }}</strong></td>
+              <td>
+                <span class="badge" [ngClass]="position.side === 'long' ? 'badge-success' : 'badge-danger'">
+                  {{ position.side }}
+                </span>
+              </td>
+              <td>{{ position.quantity }}</td>
+              <td>{{ formatCurrency(position.averageEntryPrice) }}</td>
+              <td>{{ formatCurrency(position.currentPrice) }}</td>
+              <td>{{ formatCurrency(position.marketValue) }}</td>
+              <td>{{ formatCurrency(position.costBasis) }}</td>
+              <td [ngClass]="getPnlClass(position.unrealizedPnl)">
+                {{ formatCurrency(position.unrealizedPnl) }}
+              </td>
+              <td [ngClass]="getPnlClass(position.unrealizedPnlPercent)">
+                {{ formatPercent(position.unrealizedPnlPercent) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

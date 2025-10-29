@@ -1,0 +1,97 @@
+<div class="container">
+  <h1 class="page-title">Orders Management</h1>
+
+  <!-- Order Statistics -->
+  <div *ngIf="statistics" class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Total Orders</div>
+      <div class="metric-value">{{ statistics.totalOrders }}</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Active Orders</div>
+      <div class="metric-value">{{ statistics.activeOrders }}</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-value">{{ formatPercent(statistics.winRate) }}</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Total P&L</div>
+      <div class="metric-value" [ngClass]="getPnlClass(statistics.totalRealizedPnl)">
+        {{ formatCurrency(statistics.totalRealizedPnl) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'active'" (click)="setActiveTab('active')">
+      Active Orders
+    </button>
+    <button class="tab" [class.active]="activeTab === 'completed'" (click)="setActiveTab('completed')">
+      Completed Orders
+    </button>
+    <button class="tab" [class.active]="activeTab === 'rejected'" (click)="setActiveTab('rejected')">
+      Rejected Orders
+    </button>
+    <button class="tab" [class.active]="activeTab === 'outstanding'" (click)="setActiveTab('outstanding')">
+      Outstanding Orders
+    </button>
+    <button class="tab" [class.active]="activeTab === 'all'" (click)="setActiveTab('all')">
+      All Orders
+    </button>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card">
+    <div *ngIf="loading" class="spinner"></div>
+
+    <div *ngIf="error" class="error-message">{{ error }}</div>
+
+    <div *ngIf="!loading && orders.length === 0" class="no-data">
+      No orders found
+    </div>
+
+    <div *ngIf="!loading && orders.length > 0" class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Symbol</th>
+            <th>Type</th>
+            <th>Action</th>
+            <th>Qty</th>
+            <th>Entry Price</th>
+            <th>Current Price</th>
+            <th>P&L</th>
+            <th>State</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of orders">
+            <td>{{ order.orderId || 'N/A' }}</td>
+            <td>{{ order.symbol || 'N/A' }}</td>
+            <td>{{ order.optionType || 'N/A' }}</td>
+            <td>{{ order.action || 'N/A' }}</td>
+            <td>{{ order.qty || 0 }}</td>
+            <td>{{ formatCurrency(order.entryPrice) }}</td>
+            <td>{{ formatCurrency(order.currentPrice) }}</td>
+            <td [ngClass]="getPnlClass(order.unrealizedPnl || order.realizedProfit)">
+              {{ formatCurrency(order.unrealizedPnl || order.realizedProfit || 0) }}
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getStateClass(order.state)">
+                {{ order.state || 'Unknown' }}
+              </span>
+            </td>
+            <td>{{ order.timestamp ? (order.timestamp | date:'short') : 'N/A' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

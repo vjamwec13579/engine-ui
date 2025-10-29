@@ -1,0 +1,20 @@
+<div class="app-container">
+  <nav class="navbar">
+    <div class="nav-brand">
+      <h1>Trading Engine Manager</h1>
+    </div>
+    <div class="nav-links">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
+      <a routerLink="/orders" routerLinkActive="active" class="nav-link">Orders</a>
+      <a routerLink="/account" routerLinkActive="active" class="nav-link">Account</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2025 Trading Engine Manager. All rights reserved.</p>
+  </footer>
+</div>

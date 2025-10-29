@@ -1,0 +1,23 @@
+.page-title {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: var(--light-blue);
+  text-align: center;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.error-message {
+  color: var(--danger);
+  text-align: center;
+  padding: 20px;
+}

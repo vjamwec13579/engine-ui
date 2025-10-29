@@ -1,0 +1,85 @@
+.page-title {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: var(--light-blue);
+  text-align: center;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.refresh-btn {
+  font-size: 0.9rem;
+  padding: 8px 16px;
+}
+
+.account-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 6px;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.info-value {
+  color: var(--text-primary);
+}
+
+.account-flags {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px;
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 6px;
+}
+
+.flag-item {
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+}
+
+.flag-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.flag-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.error-message {
+  color: var(--danger);
+  text-align: center;
+  padding: 20px;
+}

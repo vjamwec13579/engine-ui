@@ -1,0 +1,67 @@
+<div class="container">
+  <h1 class="page-title">Trading Engine Dashboard</h1>
+
+  <div *ngIf="loading" class="spinner"></div>
+
+  <div *ngIf="error" class="card">
+    <p class="error-message">{{ error }}</p>
+  </div>
+
+  <div *ngIf="metrics && !loading">
+    <!-- Engine Health Status -->
+    <div class="card">
+      <div class="card-header">Engine Health</div>
+      <div class="health-status">
+        <span class="badge" [ngClass]="getHealthStatusClass()">
+          {{ metrics.engineHealth.status }}
+        </span>
+        <div class="health-details">
+          <p><strong>Active Orders:</strong> {{ metrics.engineHealth.activeOrderCount }}</p>
+          <p><strong>Signals (Last 5 min):</strong> {{ metrics.engineHealth.signalCountLast5Minutes }}</p>
+          <p *ngIf="metrics.engineHealth.lastSignalTimestamp">
+            <strong>Last Signal:</strong> {{ metrics.engineHealth.lastSignalTimestamp | date:'short' }}
+          </p>
+          <p *ngIf="metrics.engineHealth.lastOrderTimestamp">
+            <strong>Last Order:</strong> {{ metrics.engineHealth.lastOrderTimestamp | date:'short' }}
+          </p>
+        </div>
+        <div *ngIf="metrics.engineHealth.healthIssues.length > 0" class="health-issues">
+          <p><strong>Issues:</strong></p>
+          <ul>
+            <li *ngFor="let issue of metrics.engineHealth.healthIssues">{{ issue }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Cluster Uptime</div>
+        <div class="metric-value">{{ formatUptime(metrics.clusterUptime) }}</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Trades / Min</div>
+        <div class="metric-value">{{ metrics.tradesPerMinute.toFixed(2) }}</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Gross Portfolio</div>
+        <div class="metric-value">{{ formatCurrency(metrics.grossPortfolio) }}</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">YTD P&L</div>
+        <div class="metric-value" [ngClass]="getPnlClass(metrics.ytdPnl)">
+          {{ formatCurrency(metrics.ytdPnl) }}
+        </div>
+        <div class="metric-change" [ngClass]="getPnlClass(metrics.ytdPnl)">
+          {{ formatPercent(metrics.ytdReturnPercent) }}
+        </div>
+      </div>
+    </div>
+
+    <p class="last-updated">Last updated: {{ metrics.lastUpdated | date:'medium' }}</p>
+  </div>
+</div>
