@@ -1,0 +1,8 @@
+{
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_user": "your-email@gmail.com",
+    "smtp_pass": "your-app-password-here",
+    "alert_email": "james@kernanglobal.com",
+    "slack_webhook": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}

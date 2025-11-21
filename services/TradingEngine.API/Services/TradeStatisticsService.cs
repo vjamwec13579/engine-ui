@@ -10,6 +10,7 @@ public interface ITradeStatisticsService
     Task<DashboardMetrics> GetDashboardMetricsAsync();
     Task<OrderStatistics> GetOrderStatisticsAsync();
     Task<List<OrderDto>> GetOrdersByStateAsync(string state);
+    Task<List<OrderDto>> GetOrdersByStatesAsync(params string[] states);
     Task<List<OrderDto>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 100);
 }
 
@@ -17,14 +18,17 @@ public class TradeStatisticsService : ITradeStatisticsService
 {
     private readonly TradingEngineDbContext _context;
     private readonly ILogger<TradeStatisticsService> _logger;
+    private readonly IAlpacaService _alpacaService;
     private readonly DateTime _startupTime;
 
     public TradeStatisticsService(
         TradingEngineDbContext context,
-        ILogger<TradeStatisticsService> logger)
+        ILogger<TradeStatisticsService> logger,
+        IAlpacaService alpacaService)
     {
         _context = context;
         _logger = logger;
+        _alpacaService = alpacaService;
         _startupTime = DateTime.UtcNow;
     }
 
@@ -45,8 +49,22 @@ public class TradeStatisticsService : ITradeStatisticsService
                 .OrderByDescending(o => o.Timestamp)
                 .FirstOrDefaultAsync();
 
-            var activeOrderCount = await _context.RealtimeOrders
-                .CountAsync(o => o.State == "active" || o.State == "open");
+            var allOrdersForHealth = await _context.RealtimeOrders.ToListAsync();
+
+            // Group by OrderId and prioritize non-pending states
+            var uniqueOrdersForHealth = allOrdersForHealth
+                .Where(o => o.OrderId != Guid.Empty)
+                .GroupBy(o => o.OrderId)
+                .Select(g => {
+                    // Prioritize any non-pending state over pending
+                    var nonPending = g.FirstOrDefault(o => !string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase));
+                    return nonPending ?? g.First();
+                })
+                .ToList();
+
+            var activeOrderCount = uniqueOrdersForHealth
+                .Count(o => string.Equals(o.State, "active", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(o.State, "open", StringComparison.OrdinalIgnoreCase));
 
             var signalCountLast5Min = await _context.RealtimeSignalStore
                 .CountAsync(s => s.Timestamp >= fiveMinutesAgo);
@@ -80,28 +98,30 @@ public class TradeStatisticsService : ITradeStatisticsService
             var tradesPerMinute = signalCountLast5Min / 5.0;
 
             // Portfolio and P&L calculations
-            var activeOrders = await _context.RealtimeOrders
-                .Where(o => o.State == "active" || o.State == "open")
-                .ToListAsync();
+            var activeOrders = uniqueOrdersForHealth
+                .Where(o => string.Equals(o.State, "active", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(o.State, "open", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             var grossPortfolio = activeOrders
                 .Sum(o => (o.CurrentPrice ?? o.EntryPrice ?? 0) * (o.Qty ?? 0));
 
-            var ytdOrders = await _context.RealtimeOrders
+            var ytdUniqueOrders = uniqueOrdersForHealth
                 .Where(o => o.Timestamp >= yearStart)
-                .ToListAsync();
+                .ToList();
 
-            var ytdRealizedPnl = ytdOrders
+            var ytdRealizedPnl = ytdUniqueOrders
                 .Where(o => o.RealizedProfit.HasValue)
                 .Sum(o => o.RealizedProfit ?? 0);
 
             var ytdUnrealizedPnl = activeOrders
+                .Where(o => o.Timestamp >= yearStart)
                 .Sum(o => ((o.CurrentPrice ?? 0) - (o.EntryPrice ?? 0)) * (o.Qty ?? 0));
 
             var ytdTotalPnl = ytdRealizedPnl + ytdUnrealizedPnl;
 
             // Estimate starting capital (simplified - you may want to track this properly)
-            var ytdInvestedCapital = ytdOrders
+            var ytdInvestedCapital = ytdUniqueOrders
                 .Sum(o => (o.EntryPrice ?? 0) * (o.Qty ?? 0));
 
             var ytdReturnPercent = ytdInvestedCapital > 0
@@ -134,22 +154,42 @@ public class TradeStatisticsService : ITradeStatisticsService
         {
             var allOrders = await _context.RealtimeOrders.ToListAsync();
 
-            var totalOrders = allOrders.Count;
-            var activeOrders = allOrders.Count(o => o.State == "active" || o.State == "open");
-            var completedOrders = allOrders.Count(o => o.State == "filled" || o.State == "closed");
-            var rejectedOrders = allOrders.Count(o => o.State == "rejected" || o.State == "canceled");
-            var outstandingOrders = allOrders.Count(o => o.State == "pending" || o.State == "new");
+            // Group by OrderId and prioritize non-pending states
+            var uniqueOrders = allOrders
+                .Where(o => o.OrderId != Guid.Empty)
+                .GroupBy(o => o.OrderId)
+                .Select(g => {
+                    // Prioritize any non-pending state over pending
+                    var nonPending = g.FirstOrDefault(o => !string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase));
+                    return nonPending ?? g.First();
+                })
+                .ToList();
 
-            var totalRealizedPnl = allOrders
+            var totalOrders = uniqueOrders.Count;
+            var activeOrders = uniqueOrders.Count(o => string.Equals(o.State, "active", StringComparison.OrdinalIgnoreCase) ||
+                                                        string.Equals(o.State, "open", StringComparison.OrdinalIgnoreCase));
+            var completedOrders = uniqueOrders.Count(o => string.Equals(o.State, "filled", StringComparison.OrdinalIgnoreCase) ||
+                                                           string.Equals(o.State, "closed", StringComparison.OrdinalIgnoreCase) ||
+                                                           string.Equals(o.State, "pending-closed", StringComparison.OrdinalIgnoreCase));
+            var rejectedOrders = uniqueOrders.Count(o => string.Equals(o.State, "rejected", StringComparison.OrdinalIgnoreCase) ||
+                                                          string.Equals(o.State, "canceled", StringComparison.OrdinalIgnoreCase));
+            var outstandingOrders = uniqueOrders.Count(o => string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase) ||
+                                                             string.Equals(o.State, "new", StringComparison.OrdinalIgnoreCase));
+
+            var totalRealizedPnl = uniqueOrders
                 .Where(o => o.RealizedProfit.HasValue)
                 .Sum(o => o.RealizedProfit ?? 0);
 
-            var activeOrdersList = allOrders.Where(o => o.State == "active" || o.State == "open");
+            var activeOrdersList = uniqueOrders.Where(o => string.Equals(o.State, "active", StringComparison.OrdinalIgnoreCase) ||
+                                                            string.Equals(o.State, "open", StringComparison.OrdinalIgnoreCase));
             var totalUnrealizedPnl = activeOrdersList
                 .Sum(o => ((o.CurrentPrice ?? 0) - (o.EntryPrice ?? 0)) * (o.Qty ?? 0));
 
-            var closedWithProfit = allOrders
-                .Where(o => (o.State == "filled" || o.State == "closed") && o.RealizedProfit.HasValue)
+            var closedWithProfit = uniqueOrders
+                .Where(o => (string.Equals(o.State, "filled", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(o.State, "closed", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(o.State, "pending-closed", StringComparison.OrdinalIgnoreCase)) &&
+                            o.RealizedProfit.HasValue)
                 .ToList();
 
             var winningTrades = closedWithProfit.Count(o => o.RealizedProfit > 0);
@@ -185,12 +225,22 @@ public class TradeStatisticsService : ITradeStatisticsService
     {
         try
         {
-            var orders = await _context.RealtimeOrders
-                .Where(o => o.State == state.ToLower())
-                .OrderByDescending(o => o.Timestamp)
-                .ToListAsync();
+            var allOrders = await _context.RealtimeOrders.ToListAsync();
 
-            return MapToOrderDtos(orders);
+            // Group by OrderId and prioritize non-pending states, then filter by requested state
+            var orders = allOrders
+                .Where(o => o.OrderId != Guid.Empty)
+                .GroupBy(o => o.OrderId)
+                .Select(g => {
+                    // Prioritize any non-pending state over pending
+                    var nonPending = g.FirstOrDefault(o => !string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase));
+                    return nonPending ?? g.First();
+                })
+                .Where(o => string.Equals(o.State, state, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(o => o.Timestamp)
+                .ToList();
+
+            return await MapToOrderDtosAsync(orders);
         }
         catch (Exception ex)
         {
@@ -199,19 +249,57 @@ public class TradeStatisticsService : ITradeStatisticsService
         }
     }
 
+    public async Task<List<OrderDto>> GetOrdersByStatesAsync(params string[] states)
+    {
+        try
+        {
+            var allOrders = await _context.RealtimeOrders.ToListAsync();
+
+            // Group by OrderId and prioritize non-pending states, then filter by requested states
+            var orders = allOrders
+                .Where(o => o.OrderId != Guid.Empty)
+                .GroupBy(o => o.OrderId)
+                .Select(g => {
+                    // Prioritize any non-pending state over pending
+                    var nonPending = g.FirstOrDefault(o => !string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase));
+                    return nonPending ?? g.First();
+                })
+                .Where(o => states.Any(state => string.Equals(o.State, state, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(o => o.Timestamp)
+                .ToList();
+
+            return await MapToOrderDtosAsync(orders);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching orders by states: {States}", string.Join(", ", states));
+            throw;
+        }
+    }
+
     public async Task<List<OrderDto>> GetAllOrdersAsync(int pageNumber = 1, int pageSize = 100)
     {
         try
         {
+            var allOrders = await _context.RealtimeOrders.ToListAsync();
+
             var skip = (pageNumber - 1) * pageSize;
 
-            var orders = await _context.RealtimeOrders
+            // Group by OrderId and prioritize non-pending states
+            var orders = allOrders
+                .Where(o => o.OrderId != Guid.Empty)
+                .GroupBy(o => o.OrderId)
+                .Select(g => {
+                    // Prioritize any non-pending state over pending
+                    var nonPending = g.FirstOrDefault(o => !string.Equals(o.State, "pending", StringComparison.OrdinalIgnoreCase));
+                    return nonPending ?? g.First();
+                })
                 .OrderByDescending(o => o.Timestamp)
                 .Skip(skip)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToList();
 
-            return MapToOrderDtos(orders);
+            return await MapToOrderDtosAsync(orders);
         }
         catch (Exception ex)
         {
@@ -220,34 +308,70 @@ public class TradeStatisticsService : ITradeStatisticsService
         }
     }
 
-    private List<OrderDto> MapToOrderDtos(List<RealtimeOrders> orders)
+    private async Task<List<OrderDto>> MapToOrderDtosAsync(List<RealtimeOrders> orders)
     {
-        return orders.Select(o => new OrderDto
+        List<AlpacaOrderInfo> alpacaOrders;
+        try
         {
-            Index = o.Index,
-            OrderId = o.OrderId,
-            AlpacaOrderId = o.AlpacaOrderId,
-            OptionType = o.OptionType,
-            Symbol = o.Symbol,
-            Opra = o.Opra,
-            Expiry = o.Expiry,
-            Strike = o.Strike,
-            Action = o.Action,
-            Qty = o.Qty,
-            EntryPrice = o.EntryPrice,
-            CurrentPrice = o.CurrentPrice,
-            EquityPriceAtEntry = o.EquityPriceAtEntry,
-            EquityPriceCurrent = o.EquityPriceCurrent,
-            Delta = o.Delta,
-            Gamma = o.Gamma,
-            Theta = o.Theta,
-            Vega = o.Vega,
-            Score = o.Score,
-            State = o.State,
-            BarsHeld = o.BarsHeld,
-            RealizedProfit = o.RealizedProfit,
-            UnrealizedPnl = ((o.CurrentPrice ?? 0) - (o.EntryPrice ?? 0)) * (o.Qty ?? 0),
-            Timestamp = o.Timestamp
+            alpacaOrders = await _alpacaService.GetOrdersAsync(500);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch Alpaca orders, falling back to DB data");
+            alpacaOrders = new List<AlpacaOrderInfo>();
+        }
+
+        var alpacaOrderDict = alpacaOrders.ToDictionary(a => a.OrderId, a => a);
+
+        return orders.Select(o =>
+        {
+            // Try to find matching Alpaca order
+            AlpacaOrderInfo? alpacaOrder = null;
+            if (!string.IsNullOrEmpty(o.AlpacaOrderId) && alpacaOrderDict.ContainsKey(o.AlpacaOrderId))
+            {
+                alpacaOrder = alpacaOrderDict[o.AlpacaOrderId];
+            }
+
+            // Use Alpaca status if available
+            var state = alpacaOrder?.Status ?? o.State;
+
+            // Calculate P&L from Alpaca data if available
+            double? pnl = null;
+            if (alpacaOrder != null && alpacaOrder.FilledAveragePrice.HasValue && o.EntryPrice.HasValue)
+            {
+                pnl = (double)((alpacaOrder.FilledAveragePrice.Value - (decimal)o.EntryPrice.Value) * alpacaOrder.FilledQuantity);
+            }
+            else if (o.RealizedProfit.HasValue)
+            {
+                pnl = o.RealizedProfit;
+            }
+            else
+            {
+                pnl = ((o.CurrentPrice ?? 0) - (o.EntryPrice ?? 0)) * (o.Qty ?? 0);
+            }
+
+            return new OrderDto
+            {
+                OrderId = o.OrderId.ToString(),
+                AlpacaOrderId = o.AlpacaOrderId,
+                OptionType = o.OptionType,
+                Symbol = o.Symbol,
+                Opra = o.Opra,
+                Expiry = o.Expiry,
+                Strike = o.Strike,
+                Action = o.Action,
+                Qty = o.Qty,
+                EntryPrice = o.EntryPrice,
+                CurrentPrice = o.CurrentPrice,
+                EquityPriceAtEntry = o.EquityPriceAtEntry,
+                EquityPriceCurrent = o.EquityPriceCurrent,
+                Score = o.Score,
+                State = state,
+                BarsHeld = o.BarsHeld,
+                RealizedProfit = o.RealizedProfit,
+                UnrealizedPnl = pnl,
+                Timestamp = o.Timestamp
+            };
         }).ToList();
     }
 }

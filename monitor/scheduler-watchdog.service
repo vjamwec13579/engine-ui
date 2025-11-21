@@ -1,0 +1,36 @@
+# Systemd service file for Scheduler Watchdog
+# Place this in /etc/systemd/system/scheduler-watchdog.service
+
+[Unit]
+Description=Iron Condor Scheduler Watchdog
+After=network.target iron-condor-scheduler.service
+Wants=iron-condor-scheduler.service
+
+[Service]
+Type=simple
+User=james  # Replace with your username
+WorkingDirectory=/path/to/your/trading/system  # Update this path
+Environment="PYTHONUNBUFFERED=1"
+
+# Watchdog process
+ExecStart=/usr/bin/python3 /path/to/scheduler_watchdog.py --interval 60
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Resource limits
+MemoryLimit=256M
+CPUQuota=10%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=scheduler-watchdog
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

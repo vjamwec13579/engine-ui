@@ -8,6 +8,21 @@
   </div>
 
   <div *ngIf="metrics && !loading">
+    <!-- Market Indices Charts -->
+    <div class="card chart-section">
+      <app-market-charts></app-market-charts>
+    </div>
+
+    <!-- Order History Chart -->
+    <div class="card chart-section">
+      <app-order-history-chart></app-order-history-chart>
+    </div>
+
+    <!-- Symbol Price Tracker -->
+    <div class="card chart-section">
+      <app-symbol-price-tracker></app-symbol-price-tracker>
+    </div>
+
     <!-- Engine Health Status -->
     <div class="card">
       <div class="card-header">Engine Health</div>

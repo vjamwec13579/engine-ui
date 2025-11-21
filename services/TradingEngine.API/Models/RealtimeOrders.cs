@@ -7,14 +7,17 @@ namespace TradingEngine.API.Models;
 public class RealtimeOrders
 {
     [Key]
-    [Column("index")]
-    public long? Index { get; set; }
-
     [Column("order_id")]
-    public string? OrderId { get; set; }
+    public Guid OrderId { get; set; }
 
     [Column("alpaca_order_id")]
     public string? AlpacaOrderId { get; set; }
+
+    [Column("stop_loss_order_id")]
+    public string? StopLossOrderId { get; set; }
+
+    [Column("stop_loss_price")]
+    public double? StopLossPrice { get; set; }
 
     [Column("option_type")]
     public string? OptionType { get; set; }
@@ -48,24 +51,6 @@ public class RealtimeOrders
 
     [Column("equity_price_current")]
     public double? EquityPriceCurrent { get; set; }
-
-    [Column("orats_iv")]
-    public double? OratsIv { get; set; }
-
-    [Column("calculated_iv")]
-    public double? CalculatedIv { get; set; }
-
-    [Column("delta")]
-    public double? Delta { get; set; }
-
-    [Column("gamma")]
-    public double? Gamma { get; set; }
-
-    [Column("theta")]
-    public double? Theta { get; set; }
-
-    [Column("vega")]
-    public double? Vega { get; set; }
 
     [Column("score")]
     public double? Score { get; set; }

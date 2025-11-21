@@ -68,7 +68,8 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            var orders = await _statisticsService.GetOrdersByStateAsync("rejected");
+            // Include both rejected and canceled orders
+            var orders = await _statisticsService.GetOrdersByStatesAsync("rejected", "canceled");
             return Ok(orders);
         }
         catch (Exception ex)

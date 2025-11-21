@@ -102,3 +102,38 @@ export interface AlpacaOrderInfo {
   expiredAt?: Date;
   canceledAt?: Date;
 }
+
+export interface SchedulerHealthStatus {
+  timestamp: string;
+  is_alive: boolean;
+  last_execution: string | null;
+  error_count: number;
+  last_error: string | null;
+  uptime_seconds: number;
+  active_jobs: number;
+  total_executions: number;
+}
+
+export interface SchedulerStatusResponse {
+  is_healthy: boolean;
+  status: SchedulerHealthStatus;
+}
+
+export interface MarketDataBar {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MarketDataResponse {
+  symbol: string;
+  timeFrame: string;
+  bars: MarketDataBar[];
+}
+
+export interface MultiSymbolMarketDataResponse {
+  data: { [symbol: string]: MarketDataResponse };
+}

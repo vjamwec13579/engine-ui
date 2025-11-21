@@ -7,7 +7,7 @@ echo "Starting Trading Engine Management System..."
 # Function to cleanup on exit
 cleanup() {
     echo "Shutting down services..."
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+    kill $BACKEND_PID $MARKET_DATA_PID $FRONTEND_PID 2>/dev/null
     exit 0
 }
 
@@ -22,9 +22,18 @@ BACKEND_PID=$!
 # Wait for backend to start
 sleep 5
 
+# Start the Market Data API
+echo "Starting Market Data API on http://localhost:5002..."
+cd ../../monitor
+python3 market_data_api.py --local &
+MARKET_DATA_PID=$!
+
+# Wait for market data API to start
+sleep 2
+
 # Start the Angular frontend
 echo "Starting Angular UI on http://localhost:4200..."
-cd ../../ui
+cd ../ui
 npm start &
 FRONTEND_PID=$!
 
@@ -32,9 +41,10 @@ echo ""
 echo "=========================================="
 echo "Trading Engine Management System is running!"
 echo "=========================================="
-echo "Backend API:  http://localhost:5000"
-echo "Swagger UI:   http://localhost:5000/swagger"
-echo "Frontend UI:  http://localhost:4200"
+echo "Backend API:     http://localhost:5000"
+echo "Swagger UI:      http://localhost:5000/swagger"
+echo "Market Data API: http://localhost:5002"
+echo "Frontend UI:     http://localhost:4200"
 echo "=========================================="
 echo "Press Ctrl+C to stop all services"
 

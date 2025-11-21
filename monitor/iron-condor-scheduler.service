@@ -1,0 +1,36 @@
+# Systemd service file for Iron Condor Scheduler
+# Place this in /etc/systemd/system/iron-condor-scheduler.service
+
+[Unit]
+Description=Iron Condor Trading Scheduler
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=james  # Replace with your username
+WorkingDirectory=/path/to/your/trading/system  # Update this path
+Environment="PYTHONUNBUFFERED=1"
+
+# Main scheduler process
+ExecStart=/usr/bin/python3 /path/to/your/scheduler.py
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Resource limits
+MemoryLimit=512M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iron-condor-scheduler
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

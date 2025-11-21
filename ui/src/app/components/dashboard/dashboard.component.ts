@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { DashboardMetrics } from '../../models/models';
 import { interval, Subscription } from 'rxjs';
+import { MarketChartsComponent } from '../market-charts/market-charts.component';
+import { OrderHistoryChartComponent } from '../order-history-chart/order-history-chart.component';
+import { SymbolPriceTrackerComponent } from '../symbol-price-tracker/symbol-price-tracker.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MarketChartsComponent, OrderHistoryChartComponent, SymbolPriceTrackerComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })

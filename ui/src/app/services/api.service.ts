@@ -7,7 +7,9 @@ import {
   OrderStatistics,
   AlpacaAccountInfo,
   AlpacaPosition,
-  AlpacaOrderInfo
+  AlpacaOrderInfo,
+  SchedulerStatusResponse,
+  MultiSymbolMarketDataResponse
 } from '../models/models';
 
 @Injectable({
@@ -59,5 +61,29 @@ export class ApiService {
 
   getAlpacaOrders(limit: number = 100): Observable<AlpacaOrderInfo[]> {
     return this.http.get<AlpacaOrderInfo[]>(`${this.baseUrl}/account/alpaca-orders?limit=${limit}`);
+  }
+
+  // Scheduler monitoring endpoints
+  getSchedulerStatus(): Observable<SchedulerStatusResponse> {
+    // The scheduler dashboard runs on port 5001 to avoid conflicts with the main API
+    return this.http.get<SchedulerStatusResponse>('http://localhost:5001/api/status');
+  }
+
+  getSchedulerHealth(): Observable<{ status: string }> {
+    return this.http.get<{ status: string }>('http://localhost:5001/api/health');
+  }
+
+  // Market data endpoints
+  getMarketIndices(timeFrame: string = '1d'): Observable<MultiSymbolMarketDataResponse> {
+    return this.http.get<MultiSymbolMarketDataResponse>(`http://localhost:5002/api/market/indices?timeFrame=${timeFrame}`);
+  }
+
+  getMarketSymbols(symbols: string[], timeFrame: string = '1d'): Observable<MultiSymbolMarketDataResponse> {
+    const symbolsParam = symbols.join(',');
+    return this.http.get<MultiSymbolMarketDataResponse>(`http://localhost:5002/api/market/symbols?symbols=${symbolsParam}&timeFrame=${timeFrame}`);
+  }
+
+  getAvailableSymbols(): Observable<{ symbols: string[] }> {
+    return this.http.get<{ symbols: string[] }>('http://localhost:5002/api/symbols');
   }
 }
