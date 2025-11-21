@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
     # Set database URL based on --local flag
     if args.local:
-        db_url = os.getenv('LOCAL_DATABASE_URL', 'postgresql://localhost:5432/trading_engine')
+        db_url = os.getenv('LOCAL_DATABASE_URL', 'postgresql://azure_pg_admin:temp123@localhost:5432/finAI')
         logger.info("Using local database")
     else:
         db_url = os.getenv('DATABASE_URL', 'postgresql://postgresadmin:6621a9db-1ad9-4abb-b50f-6cc95a728435@pg-smplfi.postgres.database.azure.com:5432/finAI')
