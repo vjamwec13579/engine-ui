@@ -1,0 +1,51 @@
+<div class="market-charts-container">
+  <div class="charts-header">
+    <h3>Market Indices</h3>
+    <div class="time-frame-selector">
+      <button
+        *ngFor="let tf of timeFrames"
+        [class.active]="selectedTimeFrame === tf.value"
+        (click)="changeTimeFrame(tf.value)"
+        class="time-frame-button">
+        {{ tf.label }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading market data...</p>
+  </div>
+
+  <div *ngIf="error && !loading" class="error-alert">
+    <span class="error-icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <div *ngIf="marketData && !loading" class="charts-grid">
+    <!-- SPY Chart -->
+    <div class="chart-card">
+      <canvas #spyChart></canvas>
+    </div>
+
+    <!-- QQQ Chart -->
+    <div class="chart-card">
+      <canvas #qqqChart></canvas>
+    </div>
+
+    <!-- DIA Chart -->
+    <div class="chart-card">
+      <canvas #diaChart></canvas>
+    </div>
+
+    <!-- IWM Chart -->
+    <div class="chart-card">
+      <canvas #iwmChart></canvas>
+    </div>
+  </div>
+
+  <div *ngIf="marketData && !loading" class="update-info">
+    <span>Last updated: {{ currentTime | date:'short' }}</span>
+    <span class="auto-refresh">Auto-refreshes every 5 minutes</span>
+  </div>
+</div>

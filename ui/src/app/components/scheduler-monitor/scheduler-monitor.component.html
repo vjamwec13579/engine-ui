@@ -1,0 +1,113 @@
+<div class="scheduler-monitor-container">
+  <div class="page-header">
+    <h2>Iron Condor Scheduler Monitor</h2>
+    <p class="subtitle">Real-time monitoring of the Iron Condor trading strategy scheduler</p>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading scheduler status...</p>
+  </div>
+
+  <div *ngIf="error && !loading" class="error-message">
+    <div class="error-icon">⚠️</div>
+    <div class="error-content">
+      <h3>Connection Error</h3>
+      <p>{{ error }}</p>
+      <p class="error-hint">Start the scheduler dashboard with: <code>python ~/claude/engine-ui/monitor/scheduler_dashboard.py --port 5001</code></p>
+      <button (click)="loadSchedulerStatus()" class="retry-button">Retry Connection</button>
+    </div>
+  </div>
+
+  <div *ngIf="schedulerStatus && !loading" class="status-content">
+    <!-- Overall Status Card -->
+    <div class="status-card" [ngClass]="getHealthStatusClass()">
+      <div class="card-header">
+        <h3>Overall Status</h3>
+      </div>
+      <div class="card-body">
+        <div class="status-indicator">
+          <span class="status-dot" [ngClass]="getHealthStatusClass()"></span>
+          <span class="status-text">{{ schedulerStatus.is_healthy ? 'HEALTHY' : 'UNHEALTHY' }}</span>
+        </div>
+        <p class="status-description">
+          {{ schedulerStatus.is_healthy ? 'Scheduler is operating normally' : 'Scheduler requires attention' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+      <!-- Process Status -->
+      <div class="metric-card">
+        <div class="metric-label">Scheduler Process</div>
+        <div class="metric-value">
+          <span class="status-indicator" [ngClass]="getProcessStatusClass()">
+            {{ schedulerStatus.status.is_alive ? 'Running' : 'Stopped' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Total Executions -->
+      <div class="metric-card">
+        <div class="metric-label">Total Executions</div>
+        <div class="metric-value">{{ schedulerStatus.status.total_executions }}</div>
+      </div>
+
+      <!-- Error Count -->
+      <div class="metric-card" [ngClass]="getErrorClass()">
+        <div class="metric-label">Error Count</div>
+        <div class="metric-value">{{ schedulerStatus.status.error_count }}</div>
+      </div>
+
+      <!-- Uptime -->
+      <div class="metric-card">
+        <div class="metric-label">Uptime</div>
+        <div class="metric-value">{{ formatUptime(schedulerStatus.status.uptime_seconds) }}</div>
+      </div>
+
+      <!-- Active Jobs -->
+      <div class="metric-card">
+        <div class="metric-label">Active Jobs</div>
+        <div class="metric-value">{{ schedulerStatus.status.active_jobs }}</div>
+      </div>
+
+      <!-- Last Execution -->
+      <div class="metric-card">
+        <div class="metric-label">Last Execution</div>
+        <div class="metric-value small-text">
+          {{ getTimeSinceLastExecution() }}
+        </div>
+        <div class="metric-subtitle">{{ formatDate(schedulerStatus.status.last_execution) }}</div>
+      </div>
+    </div>
+
+    <!-- Error Section -->
+    <div *ngIf="schedulerStatus.status.last_error" class="error-section">
+      <h3>⚠️ Last Error</h3>
+      <div class="error-details">
+        <code>{{ schedulerStatus.status.last_error }}</code>
+      </div>
+    </div>
+
+    <!-- Timestamp -->
+    <div class="timestamp">
+      <span>Last updated: {{ formatDate(schedulerStatus.status.timestamp) }}</span>
+      <span class="refresh-note">Auto-refreshes every 30 seconds</span>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      <h3>📋 Scheduler Information</h3>
+      <ul>
+        <li><strong>Scanner Job:</strong> Runs daily at 9:35 AM ET to identify iron condor opportunities</li>
+        <li><strong>Monitor Job:</strong> Checks positions every 15 minutes during market hours (9:30 AM - 4:00 PM ET)</li>
+        <li><strong>Profit Target:</strong> Exits positions at 50% profit</li>
+        <li><strong>Location:</strong> <code>~/claude/engine/run_iron_condor_scheduler.py</code></li>
+      </ul>
+      <div class="action-buttons">
+        <button class="action-button" (click)="loadSchedulerStatus()">🔄 Refresh Now</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -137,3 +137,16 @@ export interface MarketDataResponse {
 export interface MultiSymbolMarketDataResponse {
   data: { [symbol: string]: MarketDataResponse };
 }
+
+export interface SignalIndicator {
+  timestamp: string;
+  kfRegime?: number;
+  kfVelocity?: number;
+  adx?: number;
+  volume?: number;
+}
+
+export interface SignalIndicatorsResponse {
+  symbol: string;
+  indicators: SignalIndicator[];
+}

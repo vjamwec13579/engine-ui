@@ -1,0 +1,72 @@
+<div class="order-history-container">
+  <div class="chart-header">
+    <h3>Order History</h3>
+    <div class="controls">
+      <!-- Symbol Selector -->
+      <div class="control-group">
+        <label>Symbol:</label>
+        <select [(ngModel)]="selectedSymbol" (change)="changeSymbol(selectedSymbol)" class="symbol-select">
+          <option value="All">All Symbols</option>
+          <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+        </select>
+      </div>
+
+      <!-- Time Range Selector -->
+      <div class="control-group">
+        <label>Time Range:</label>
+        <div class="time-range-buttons">
+          <button
+            *ngFor="let range of timeRanges"
+            [class.active]="selectedTimeRange === range.value"
+            (click)="changeTimeRange(range.value)"
+            class="time-range-button">
+            {{ range.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading order history...</p>
+  </div>
+
+  <div *ngIf="error && !loading" class="error-alert">
+    <span class="error-icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error">
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value">{{ getTotalOrders() }}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Total P&L</div>
+        <div class="stat-value" [ngClass]="getTotalPnL() >= 0 ? 'positive' : 'negative'">
+          {{ getTotalPnL() >= 0 ? '+' : '' }}${{ getTotalPnL().toFixed(2) }}
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Avg Entry Price</div>
+        <div class="stat-value">
+          ${{ getAverageEntryPrice().toFixed(2) }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-container">
+      <canvas #orderChart></canvas>
+    </div>
+
+    <div *ngIf="filteredOrders.length === 0" class="no-data">
+      <p>No orders found for the selected filters</p>
+    </div>
+  </div>
+</div>

@@ -9,7 +9,8 @@ import {
   AlpacaPosition,
   AlpacaOrderInfo,
   SchedulerStatusResponse,
-  MultiSymbolMarketDataResponse
+  MultiSymbolMarketDataResponse,
+  SignalIndicatorsResponse
 } from '../models/models';
 
 @Injectable({
@@ -85,5 +86,10 @@ export class ApiService {
 
   getAvailableSymbols(): Observable<{ symbols: string[] }> {
     return this.http.get<{ symbols: string[] }>('http://localhost:5002/api/symbols');
+  }
+
+  // Signal indicators endpoints
+  getSignalIndicators(symbol: string, timeFrame: string = '1d'): Observable<SignalIndicatorsResponse> {
+    return this.http.get<SignalIndicatorsResponse>(`${this.baseUrl}/marketdata/signal-indicators/${symbol}?timeFrame=${timeFrame}`);
   }
 }

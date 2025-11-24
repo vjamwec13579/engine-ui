@@ -1,0 +1,119 @@
+<div class="symbol-tracker-container">
+  <div class="tracker-header">
+    <h3>Symbol Price Tracker</h3>
+    <div class="controls">
+      <!-- Symbol Selector -->
+      <div class="control-group">
+        <label>Symbol:</label>
+        <select [(ngModel)]="selectedSymbol" (change)="changeSymbol(selectedSymbol)" class="symbol-select">
+          <option *ngFor="let symbol of availableSymbols" [value]="symbol">{{ symbol }}</option>
+        </select>
+      </div>
+
+      <!-- Time Frame Selector -->
+      <div class="control-group">
+        <label>Time Range:</label>
+        <div class="time-frame-buttons">
+          <button
+            *ngFor="let tf of timeFrames"
+            [class.active]="selectedTimeFrame === tf.value"
+            (click)="changeTimeFrame(tf.value)"
+            class="time-frame-button">
+            {{ tf.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Advanced Options Toggle -->
+      <div class="control-group">
+        <button class="advanced-toggle" (click)="toggleAdvancedOptions()">
+          {{ showAdvancedOptions ? '▼' : '▶' }} Advanced Indicators
+        </button>
+      </div>
+    </div>
+
+    <!-- Advanced Options Panel -->
+    <div class="advanced-options-panel" *ngIf="showAdvancedOptions">
+      <div class="advanced-options-grid">
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showKfRegime" (change)="onAdvancedOptionChange()">
+          <span>KF Regime (Bull/Bear/Chop)</span>
+        </label>
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showKfVelocity" (change)="onAdvancedOptionChange()">
+          <span>KF Velocity</span>
+        </label>
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showVolumeSpike" (change)="onAdvancedOptionChange()">
+          <span>Volume Spike</span>
+        </label>
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showAdx" (change)="onAdvancedOptionChange()">
+          <span>ADX (Trend Strength)</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading price data...</p>
+  </div>
+
+  <div *ngIf="error && !loading" class="error-alert">
+    <span class="error-icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error && symbolData">
+    <!-- Price Statistics -->
+    <div class="stats-grid">
+      <div class="stat-card" *ngIf="getCurrentPrice() as price">
+        <div class="stat-label">Current Price</div>
+        <div class="stat-value price-value">${{ price.toFixed(2) }}</div>
+      </div>
+
+      <div class="stat-card" *ngIf="getPriceChange() as change">
+        <div class="stat-label">Change</div>
+        <div class="stat-value" [ngClass]="change.isPositive ? 'positive' : 'negative'">
+          {{ change.isPositive ? '+' : '' }}${{ change.change.toFixed(2) }}
+          <span class="percent">({{ change.isPositive ? '+' : '' }}{{ change.changePercent.toFixed(2) }}%)</span>
+        </div>
+      </div>
+
+      <div class="stat-card" *ngIf="getHigh() as high">
+        <div class="stat-label">High</div>
+        <div class="stat-value">${{ high.toFixed(2) }}</div>
+      </div>
+
+      <div class="stat-card" *ngIf="getLow() as low">
+        <div class="stat-label">Low</div>
+        <div class="stat-value">${{ low.toFixed(2) }}</div>
+      </div>
+
+      <div class="stat-card" *ngIf="getVolume() as volume">
+        <div class="stat-label">Total Volume</div>
+        <div class="stat-value volume-value">{{ volume.toLocaleString() }}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Data Points</div>
+        <div class="stat-value">{{ symbolData.bars.length }}</div>
+      </div>
+    </div>
+
+    <!-- Price Chart -->
+    <div class="chart-container">
+      <canvas #priceChart></canvas>
+    </div>
+
+    <div class="update-info">
+      <span>Last updated: {{ currentTime | date:'short' }}</span>
+      <span class="auto-refresh">Auto-refreshes every 2 minutes</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !error && !symbolData" class="no-data">
+    <p>No data available for {{ selectedSymbol }}</p>
+  </div>
+</div>
