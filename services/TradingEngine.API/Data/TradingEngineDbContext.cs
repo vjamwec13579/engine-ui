@@ -11,6 +11,7 @@ public class TradingEngineDbContext : DbContext
     }
 
     public DbSet<RealtimeSignalStore> RealtimeSignalStore { get; set; }
+    public DbSet<RealtimeOrderflow> RealtimeOrderflow { get; set; }
     public DbSet<RealtimeOrders> RealtimeOrders { get; set; }
     public DbSet<IronCondorPosition> IronCondorPositions { get; set; }
     public DbSet<AuditOrderExecution> AuditOrderExecutions { get; set; }
@@ -21,6 +22,10 @@ public class TradingEngineDbContext : DbContext
 
         // Composite key for RealtimeSignalStore
         modelBuilder.Entity<RealtimeSignalStore>()
+            .HasKey(r => new { r.Timestamp, r.Symbol });
+
+        // Composite key for RealtimeOrderflow
+        modelBuilder.Entity<RealtimeOrderflow>()
             .HasKey(r => new { r.Timestamp, r.Symbol });
 
         // Indexes for better query performance

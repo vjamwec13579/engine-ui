@@ -142,7 +142,10 @@ export interface SignalIndicator {
   timestamp: string;
   kfRegime?: number;
   kfVelocity?: number;
-  adx?: number;
+  delta15s2?: number;
+  delta1m?: number;
+  delta5m?: number;
+  cvd1m?: number;
   volume?: number;
 }
 

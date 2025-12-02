@@ -9,8 +9,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+// Configure PostgreSQL - read from environment variable first, then config
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                       ?? builder.Configuration.GetConnectionString("PostgreSQL");
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException(
+        "Database connection string not configured. Set DATABASE_URL environment variable.");
+}
+
 builder.Services.AddDbContext<TradingEngineDbContext>(options =>
     options.UseNpgsql(connectionString));
 

@@ -5,7 +5,10 @@ public class SignalIndicatorDto
     public DateTime Timestamp { get; set; }
     public double? KfRegime { get; set; }
     public double? KfVelocity { get; set; }
-    public double? Adx { get; set; }
+    public double? Delta15s2 { get; set; }
+    public double? Delta1m { get; set; }
+    public double? Delta5m { get; set; }
+    public double? Cvd1m { get; set; }
     public double? Volume { get; set; }
 }
 

@@ -17,13 +17,22 @@ public class KeyVaultService : IKeyVaultService
     public KeyVaultService(IConfiguration configuration, ILogger<KeyVaultService> logger)
     {
         _logger = logger;
-        var keyVaultUrl = configuration["AzureKeyVault:Url"] ?? "https://smplfikv.vault.azure.net/";
+
+        // Read from environment variable first, then fall back to configuration
+        var keyVaultUrl = Environment.GetEnvironmentVariable("AZURE_KEYVAULT_URL")
+                          ?? configuration["AzureKeyVault:Url"];
+
+        if (string.IsNullOrEmpty(keyVaultUrl))
+        {
+            throw new InvalidOperationException(
+                "Azure KeyVault URL not configured. Set AZURE_KEYVAULT_URL environment variable.");
+        }
 
         try
         {
             var credential = new DefaultAzureCredential();
             _secretClient = new SecretClient(new Uri(keyVaultUrl), credential);
-            _logger.LogInformation("KeyVault client initialized with URL: {Url}", keyVaultUrl);
+            _logger.LogInformation("KeyVault client initialized successfully");
         }
         catch (Exception ex)
         {

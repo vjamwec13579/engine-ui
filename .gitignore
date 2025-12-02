@@ -10,6 +10,7 @@ obj/
 *.csproj.user
 appsettings.Development.json
 appsettings.Production.json
+**/Properties/launchSettings.json
 
 # Node
 node_modules/

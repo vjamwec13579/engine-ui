@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -43,20 +43,41 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
   advancedOptions = {
     showKfRegime: false,
     showKfVelocity: false,
-    showVolumeSpike: false,
-    showAdx: false
+    showDelta15s2: false,
+    showDelta1m: false,
+    showDelta5m: false,
+    showCvd1m: false
+  };
+
+  // Context menu for right-click data display
+  contextMenu = {
+    show: false,
+    x: 0,
+    y: 0,
+    data: null as {
+      timestamp: string;
+      price?: { open: number; high: number; low: number; close: number };
+      volume?: number;
+      kfRegime?: number | null;
+      kfVelocity?: number | null;
+      delta15s2?: number | null;
+      delta1m?: number | null;
+      delta5m?: number | null;
+      cvd1m?: number | null;
+    } | null
   };
 
   private chart?: Chart;
   private refreshSubscription?: Subscription;
+  private lastChartConfig: string = '';  // Track config to detect structural changes
 
   constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
     this.loadAvailableSymbols();
-    // Refresh every 2 minutes for near real-time updates
-    this.refreshSubscription = interval(120000).subscribe(() => {
-      this.loadSymbolData();
+    // Refresh every 10 seconds for near real-time updates
+    this.refreshSubscription = interval(10000).subscribe(() => {
+      this.loadSymbolData(true);  // Silent refresh - no loading spinner
     });
   }
 
@@ -93,14 +114,24 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
     }
   }
 
-  loadSymbolData(): void {
-    this.loading = true;
+  loadSymbolData(silentRefresh: boolean = false): void {
+    if (!silentRefresh) {
+      this.loading = true;
+      // Reset chart config since canvas will be removed from DOM
+      this.lastChartConfig = '';
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = undefined;
+      }
+    }
     this.error = null;
 
     const hasAdvancedOptions = this.advancedOptions.showKfRegime ||
                                 this.advancedOptions.showKfVelocity ||
-                                this.advancedOptions.showVolumeSpike ||
-                                this.advancedOptions.showAdx;
+                                this.advancedOptions.showDelta15s2 ||
+                                this.advancedOptions.showDelta1m ||
+                                this.advancedOptions.showDelta5m ||
+                                this.advancedOptions.showCvd1m;
 
     if (hasAdvancedOptions) {
       // Load both market data and signal indicators
@@ -168,10 +199,6 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
     const ctx = this.priceChartRef.nativeElement.getContext('2d');
     if (!ctx) return;
 
-    if (this.chart) {
-      this.chart.destroy();
-    }
-
     const candlestickData = this.symbolData.bars.map(bar => ({
       x: new Date(bar.timestamp).getTime(),
       o: bar.open,
@@ -190,6 +217,25 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
     const change = lastPrice - firstPrice;
     const changePercent = (change / firstPrice) * 100;
     const isPositive = change >= 0;
+
+    // Build a config key to detect structural changes
+    const currentConfig = JSON.stringify({
+      symbol: this.selectedSymbol,
+      timeFrame: this.selectedTimeFrame,
+      advancedOptions: this.advancedOptions
+    });
+
+    // If chart exists and config unchanged, update data in place
+    if (this.chart && this.lastChartConfig === currentConfig) {
+      this.refreshChartData(candlestickData, volumes, lastPrice, changePercent, isPositive);
+      return;
+    }
+
+    // Config changed or no chart exists - recreate
+    this.lastChartConfig = currentConfig;
+    if (this.chart) {
+      this.chart.destroy();
+    }
 
     // Build datasets array dynamically
     const datasets: any[] = [
@@ -370,16 +416,16 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
         }
       }
 
-      // ADX (Trend Strength)
-      if (this.advancedOptions.showAdx) {
-        const adxData = indicators
-          .filter(i => i.adx !== null && i.adx !== undefined)
+      // Delta 15s (2nd bucket)
+      if (this.advancedOptions.showDelta15s2) {
+        const deltaData = indicators
+          .filter(i => i.delta15s2 !== null && i.delta15s2 !== undefined)
           .map(i => ({
             x: new Date(i.timestamp).getTime(),
-            y: i.adx
+            y: i.delta15s2
           }));
 
-        if (adxData.length > 0) {
+        if (deltaData.length > 0) {
           let axisId = 'y2';
           if (this.advancedOptions.showKfRegime && this.advancedOptions.showKfVelocity) {
             axisId = 'y4';
@@ -388,8 +434,8 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
           }
 
           datasets.push({
-            label: 'ADX',
-            data: adxData,
+            label: 'Delta 15s',
+            data: deltaData,
             type: 'line',
             backgroundColor: 'rgba(0, 188, 212, 0.1)',
             borderColor: 'rgba(0, 188, 212, 1)',
@@ -405,10 +451,8 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
             position: 'right',
             title: {
               display: true,
-              text: 'ADX'
+              text: 'Delta 15s'
             },
-            min: 0,
-            max: 100,
             grid: {
               drawOnChartArea: false
             }
@@ -416,27 +460,21 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
         }
       }
 
-      // Volume Spike (calculated as % above average volume)
-      if (this.advancedOptions.showVolumeSpike) {
-        const volumeData = indicators
-          .filter(i => i.volume !== null && i.volume !== undefined)
-          .map(i => i.volume as number);
+      // Delta 1m
+      if (this.advancedOptions.showDelta1m) {
+        const deltaData = indicators
+          .filter(i => i.delta1m !== null && i.delta1m !== undefined)
+          .map(i => ({
+            x: new Date(i.timestamp).getTime(),
+            y: i.delta1m
+          }));
 
-        if (volumeData.length > 0) {
-          const avgVolume = volumeData.reduce((sum, v) => sum + v, 0) / volumeData.length;
-
-          const volumeSpikeData = indicators
-            .filter(i => i.volume !== null && i.volume !== undefined)
-            .map(i => ({
-              x: new Date(i.timestamp).getTime(),
-              y: ((i.volume! - avgVolume) / avgVolume) * 100
-            }));
-
+        if (deltaData.length > 0) {
           let axisId = 'y2';
           const activeAxes = [
             this.advancedOptions.showKfRegime,
             this.advancedOptions.showKfVelocity,
-            this.advancedOptions.showAdx
+            this.advancedOptions.showDelta15s2
           ].filter(Boolean).length;
 
           if (activeAxes === 3) axisId = 'y5';
@@ -444,8 +482,8 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
           else if (activeAxes === 1) axisId = 'y3';
 
           datasets.push({
-            label: 'Volume Spike %',
-            data: volumeSpikeData,
+            label: 'Delta 1m',
+            data: deltaData,
             type: 'line',
             backgroundColor: 'rgba(233, 30, 99, 0.1)',
             borderColor: 'rgba(233, 30, 99, 1)',
@@ -461,7 +499,109 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
             position: 'right',
             title: {
               display: true,
-              text: 'Vol Spike %'
+              text: 'Delta 1m'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          };
+        }
+      }
+
+      // Delta 5m
+      if (this.advancedOptions.showDelta5m) {
+        const deltaData = indicators
+          .filter(i => i.delta5m !== null && i.delta5m !== undefined)
+          .map(i => ({
+            x: new Date(i.timestamp).getTime(),
+            y: i.delta5m
+          }));
+
+        if (deltaData.length > 0) {
+          let axisId = 'y2';
+          const activeAxes = [
+            this.advancedOptions.showKfRegime,
+            this.advancedOptions.showKfVelocity,
+            this.advancedOptions.showDelta15s2,
+            this.advancedOptions.showDelta1m
+          ].filter(Boolean).length;
+
+          if (activeAxes >= 4) axisId = 'y6';
+          else if (activeAxes === 3) axisId = 'y5';
+          else if (activeAxes === 2) axisId = 'y4';
+          else if (activeAxes === 1) axisId = 'y3';
+
+          datasets.push({
+            label: 'Delta 5m',
+            data: deltaData,
+            type: 'line',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            borderColor: 'rgba(76, 175, 80, 1)',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            yAxisID: axisId
+          });
+
+          scales[axisId] = {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Delta 5m'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          };
+        }
+      }
+
+      // CVD 1m
+      if (this.advancedOptions.showCvd1m) {
+        const cvdData = indicators
+          .filter(i => i.cvd1m !== null && i.cvd1m !== undefined)
+          .map(i => ({
+            x: new Date(i.timestamp).getTime(),
+            y: i.cvd1m
+          }));
+
+        if (cvdData.length > 0) {
+          let axisId = 'y2';
+          const activeAxes = [
+            this.advancedOptions.showKfRegime,
+            this.advancedOptions.showKfVelocity,
+            this.advancedOptions.showDelta15s2,
+            this.advancedOptions.showDelta1m,
+            this.advancedOptions.showDelta5m
+          ].filter(Boolean).length;
+
+          if (activeAxes >= 5) axisId = 'y7';
+          else if (activeAxes === 4) axisId = 'y6';
+          else if (activeAxes === 3) axisId = 'y5';
+          else if (activeAxes === 2) axisId = 'y4';
+          else if (activeAxes === 1) axisId = 'y3';
+
+          datasets.push({
+            label: 'CVD 1m',
+            data: cvdData,
+            type: 'line',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            borderColor: 'rgba(255, 193, 7, 1)',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            yAxisID: axisId
+          });
+
+          scales[axisId] = {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'CVD 1m'
             },
             grid: {
               drawOnChartArea: false
@@ -544,6 +684,78 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
+  private refreshChartData(
+    candlestickData: any[],
+    volumes: any[],
+    lastPrice: number,
+    changePercent: number,
+    isPositive: boolean
+  ): void {
+    if (!this.chart) return;
+
+    // Update candlestick data (dataset 0)
+    this.chart.data.datasets[0].data = candlestickData;
+
+    // Update volume data (dataset 1)
+    this.chart.data.datasets[1].data = volumes;
+
+    // Update advanced indicator datasets if present
+    if (this.signalIndicators && this.signalIndicators.indicators.length > 0) {
+      const indicators = this.signalIndicators.indicators;
+      let datasetIndex = 2;
+
+      if (this.advancedOptions.showKfRegime && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.kfRegime !== null && i.kfRegime !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.kfRegime! })) as any;
+        datasetIndex++;
+      }
+
+      if (this.advancedOptions.showKfVelocity && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.kfVelocity !== null && i.kfVelocity !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.kfVelocity! })) as any;
+        datasetIndex++;
+      }
+
+      if (this.advancedOptions.showDelta15s2 && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.delta15s2 !== null && i.delta15s2 !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.delta15s2! })) as any;
+        datasetIndex++;
+      }
+
+      if (this.advancedOptions.showDelta1m && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.delta1m !== null && i.delta1m !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.delta1m! })) as any;
+        datasetIndex++;
+      }
+
+      if (this.advancedOptions.showDelta5m && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.delta5m !== null && i.delta5m !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.delta5m! })) as any;
+        datasetIndex++;
+      }
+
+      if (this.advancedOptions.showCvd1m && this.chart.data.datasets[datasetIndex]) {
+        this.chart.data.datasets[datasetIndex].data = indicators
+          .filter(i => i.cvd1m !== null && i.cvd1m !== undefined)
+          .map(i => ({ x: new Date(i.timestamp).getTime(), y: i.cvd1m! })) as any;
+      }
+    }
+
+    // Update title with new price
+    if (this.chart.options.plugins?.title) {
+      this.chart.options.plugins.title.text = `${this.selectedSymbol} - $${lastPrice.toFixed(2)} (${isPositive ? '+' : ''}${changePercent.toFixed(2)}%)`;
+      this.chart.options.plugins.title.color = isPositive ? '#4CAF50' : '#F44336';
+    }
+
+    // Smooth update without animation reset
+    this.chart.update('none');
+  }
+
   getCurrentPrice(): number | null {
     if (!this.symbolData || !this.symbolData.bars.length) return null;
     return this.symbolData.bars[this.symbolData.bars.length - 1].close;
@@ -577,5 +789,81 @@ export class SymbolPriceTrackerComponent implements OnInit, OnDestroy, AfterView
   getVolume(): number | null {
     if (!this.symbolData || !this.symbolData.bars.length) return null;
     return this.symbolData.bars.reduce((sum, bar) => sum + bar.volume, 0);
+  }
+
+  // Close context menu when clicking elsewhere
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.contextMenu.show = false;
+  }
+
+  onChartRightClick(event: MouseEvent): void {
+    event.preventDefault();
+
+    if (!this.chart || !this.symbolData) return;
+
+    // Get the chart area and calculate the clicked position
+    const rect = this.priceChartRef.nativeElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Get the nearest data point using Chart.js's getElementsAtEventForMode
+    const elements = this.chart.getElementsAtEventForMode(
+      event as unknown as Event,
+      'nearest',
+      { intersect: false, axis: 'x' },
+      false
+    );
+
+    if (elements.length > 0) {
+      const element = elements[0];
+      const dataIndex = element.index;
+
+      // Get the bar data at this index
+      const bar = this.symbolData.bars[dataIndex];
+      if (bar) {
+        // Build context menu data
+        const menuData: typeof this.contextMenu.data = {
+          timestamp: new Date(bar.timestamp).toLocaleString(),
+          price: {
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close
+          },
+          volume: bar.volume
+        };
+
+        // Add indicator data if available
+        if (this.signalIndicators?.indicators) {
+          const indicator = this.signalIndicators.indicators[dataIndex];
+          if (indicator) {
+            menuData.kfRegime = indicator.kfRegime;
+            menuData.kfVelocity = indicator.kfVelocity;
+            menuData.delta15s2 = indicator.delta15s2;
+            menuData.delta1m = indicator.delta1m;
+            menuData.delta5m = indicator.delta5m;
+            menuData.cvd1m = indicator.cvd1m;
+          }
+        }
+
+        this.contextMenu = {
+          show: true,
+          x: event.clientX,
+          y: event.clientY,
+          data: menuData
+        };
+      }
+    }
+  }
+
+  getRegimeLabel(regime: number | null | undefined): string {
+    if (regime === null || regime === undefined) return 'N/A';
+    switch (regime) {
+      case 0: return 'Bull';
+      case 1: return 'Bear';
+      case 2: return 'Chop';
+      default: return `Unknown (${regime})`;
+    }
   }
 }

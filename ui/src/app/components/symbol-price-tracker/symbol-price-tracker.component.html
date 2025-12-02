@@ -44,12 +44,20 @@
           <span>KF Velocity</span>
         </label>
         <label class="indicator-checkbox">
-          <input type="checkbox" [(ngModel)]="advancedOptions.showVolumeSpike" (change)="onAdvancedOptionChange()">
-          <span>Volume Spike</span>
+          <input type="checkbox" [(ngModel)]="advancedOptions.showDelta15s2" (change)="onAdvancedOptionChange()">
+          <span>Delta 15s</span>
         </label>
         <label class="indicator-checkbox">
-          <input type="checkbox" [(ngModel)]="advancedOptions.showAdx" (change)="onAdvancedOptionChange()">
-          <span>ADX (Trend Strength)</span>
+          <input type="checkbox" [(ngModel)]="advancedOptions.showDelta1m" (change)="onAdvancedOptionChange()">
+          <span>Delta 1m</span>
+        </label>
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showDelta5m" (change)="onAdvancedOptionChange()">
+          <span>Delta 5m</span>
+        </label>
+        <label class="indicator-checkbox">
+          <input type="checkbox" [(ngModel)]="advancedOptions.showCvd1m" (change)="onAdvancedOptionChange()">
+          <span>CVD 1m</span>
         </label>
       </div>
     </div>
@@ -104,12 +112,59 @@
 
     <!-- Price Chart -->
     <div class="chart-container">
-      <canvas #priceChart></canvas>
+      <canvas #priceChart (contextmenu)="onChartRightClick($event)"></canvas>
+    </div>
+
+    <!-- Right-click Context Menu -->
+    <div class="context-menu"
+         *ngIf="contextMenu.show && contextMenu.data"
+         [style.left.px]="contextMenu.x"
+         [style.top.px]="contextMenu.y">
+      <div class="context-menu-header">{{ contextMenu.data.timestamp }}</div>
+      <div class="context-menu-section">
+        <div class="context-menu-title">Price</div>
+        <div class="context-menu-row">
+          <span>Open:</span><span>${{ contextMenu.data.price?.open?.toFixed(2) }}</span>
+        </div>
+        <div class="context-menu-row">
+          <span>High:</span><span>${{ contextMenu.data.price?.high?.toFixed(2) }}</span>
+        </div>
+        <div class="context-menu-row">
+          <span>Low:</span><span>${{ contextMenu.data.price?.low?.toFixed(2) }}</span>
+        </div>
+        <div class="context-menu-row">
+          <span>Close:</span><span>${{ contextMenu.data.price?.close?.toFixed(2) }}</span>
+        </div>
+        <div class="context-menu-row">
+          <span>Volume:</span><span>{{ contextMenu.data.volume?.toLocaleString() }}</span>
+        </div>
+      </div>
+      <div class="context-menu-section" *ngIf="contextMenu.data.kfVelocity !== undefined || contextMenu.data.kfRegime !== undefined || contextMenu.data.delta15s2 !== undefined || contextMenu.data.delta1m !== undefined || contextMenu.data.delta5m !== undefined || contextMenu.data.cvd1m !== undefined">
+        <div class="context-menu-title">Indicators</div>
+        <div class="context-menu-row" *ngIf="contextMenu.data.kfRegime !== undefined">
+          <span>KF Regime:</span><span class="regime-value">{{ getRegimeLabel(contextMenu.data.kfRegime) }}</span>
+        </div>
+        <div class="context-menu-row highlight" *ngIf="contextMenu.data.kfVelocity !== undefined">
+          <span>KF Velocity:</span><span class="velocity-value">{{ contextMenu.data.kfVelocity !== null ? contextMenu.data.kfVelocity.toFixed(4) : 'N/A' }}</span>
+        </div>
+        <div class="context-menu-row" *ngIf="contextMenu.data.delta15s2 !== undefined">
+          <span>Delta 15s:</span><span>{{ contextMenu.data.delta15s2 !== null ? contextMenu.data.delta15s2.toFixed(0) : 'N/A' }}</span>
+        </div>
+        <div class="context-menu-row" *ngIf="contextMenu.data.delta1m !== undefined">
+          <span>Delta 1m:</span><span>{{ contextMenu.data.delta1m !== null ? contextMenu.data.delta1m.toFixed(0) : 'N/A' }}</span>
+        </div>
+        <div class="context-menu-row" *ngIf="contextMenu.data.delta5m !== undefined">
+          <span>Delta 5m:</span><span>{{ contextMenu.data.delta5m !== null ? contextMenu.data.delta5m.toFixed(0) : 'N/A' }}</span>
+        </div>
+        <div class="context-menu-row" *ngIf="contextMenu.data.cvd1m !== undefined">
+          <span>CVD 1m:</span><span>{{ contextMenu.data.cvd1m !== null ? contextMenu.data.cvd1m.toFixed(0) : 'N/A' }}</span>
+        </div>
+      </div>
     </div>
 
     <div class="update-info">
-      <span>Last updated: {{ currentTime | date:'short' }}</span>
-      <span class="auto-refresh">Auto-refreshes every 2 minutes</span>
+      <span>Last updated: {{ currentTime | date:'medium' }}</span>
+      <span class="auto-refresh">Auto-refreshes every 10 seconds</span>
     </div>
   </div>
 

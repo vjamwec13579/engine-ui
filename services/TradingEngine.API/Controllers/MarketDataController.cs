@@ -26,10 +26,30 @@ public class MarketDataController : ControllerBase
         try
         {
             DateTime startDate;
+            // Get current time in Eastern Time for market calculations
+            var easternZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            var nowEastern = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+
             switch (timeFrame.ToLower())
             {
                 case "1d":
-                    startDate = DateTime.UtcNow.AddDays(-1);
+                    // Get today's trading day starting at market open (9:30 AM ET)
+                    var todayMarketOpen = nowEastern.Date.AddHours(9).AddMinutes(30);
+
+                    // If before market open, use previous trading day
+                    if (nowEastern.Hour < 9 || (nowEastern.Hour == 9 && nowEastern.Minute < 30))
+                    {
+                        todayMarketOpen = todayMarketOpen.AddDays(-1);
+                    }
+
+                    // Skip weekends - go back to Friday
+                    while (todayMarketOpen.DayOfWeek == DayOfWeek.Saturday || todayMarketOpen.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        todayMarketOpen = todayMarketOpen.AddDays(-1);
+                    }
+
+                    // Convert back to UTC for database query
+                    startDate = TimeZoneInfo.ConvertTimeToUtc(todayMarketOpen, easternZone);
                     break;
                 case "5d":
                     startDate = DateTime.UtcNow.AddDays(-5);
@@ -42,7 +62,7 @@ public class MarketDataController : ControllerBase
                     break;
             }
 
-            var indicators = await _context.RealtimeSignalStore
+            var indicators = await _context.RealtimeOrderflow
                 .Where(s => s.Symbol == symbol.ToUpper() && s.Timestamp >= startDate)
                 .OrderBy(s => s.Timestamp)
                 .Select(s => new SignalIndicatorDto
@@ -50,7 +70,10 @@ public class MarketDataController : ControllerBase
                     Timestamp = s.Timestamp,
                     KfRegime = s.KfRegime,
                     KfVelocity = s.KfVelocity,
-                    Adx = s.Adx,
+                    Delta15s2 = s.Delta15s2,
+                    Delta1m = s.Delta1m,
+                    Delta5m = s.Delta5m,
+                    Cvd1m = s.Cvd1m,
                     Volume = s.Volume
                 })
                 .ToListAsync();

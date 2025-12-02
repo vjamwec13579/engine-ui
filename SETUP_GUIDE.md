@@ -26,7 +26,7 @@ If not, you'll need to create them based on your existing schema.
    az login
    ```
 
-2. Ensure your KeyVault (`https://smplfikv.vault.azure.net/`) has these secrets:
+2. Ensure your KeyVault (set via `AZURE_KEYVAULT_URL` env var) has these secrets:
    - `ALPACA-KEY` - Your Alpaca API key
    - `ALPACA-SECRET` - Your Alpaca secret key
 
@@ -39,14 +39,13 @@ If not, you'll need to create them based on your existing schema.
    cd services/TradingEngine.API
    ```
 
-2. Update `appsettings.json` with your PostgreSQL connection:
-   ```json
-   {
-     "ConnectionStrings": {
-       "PostgreSQL": "Host=localhost;Port=5432;Database=finAI;Username=azure_pg_admin;Password=temp123;SSL Mode=Disable"
-     }
-   }
+2. Set required environment variables:
+   ```bash
+   export DATABASE_URL="postgresql://user:password@host:5432/database"
+   export AZURE_KEYVAULT_URL="https://your-keyvault.vault.azure.net/"
    ```
+
+   Or create a `.env` file (see `.env.example` for template).
 
 3. Restore .NET packages:
    ```bash
